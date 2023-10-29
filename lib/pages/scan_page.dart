@@ -56,6 +56,7 @@ class _ScanPageState extends State<ScanPage> {
               builder: (context) => UserDetailPage(
                 data: _extractedInformation,
                 barcodeResult: barcodeScanResult,
+                token: widget.token,
               ),
             ),
           );
