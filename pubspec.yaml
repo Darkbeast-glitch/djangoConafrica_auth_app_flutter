@@ -32,6 +32,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_barcode_scanner: ^2.0.0
+  flutter_riverpod: ^2.4.5
   google_fonts: ^6.1.0
   http: ^1.1.0
 

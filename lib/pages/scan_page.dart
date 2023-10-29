@@ -13,7 +13,6 @@ class ScanPage extends StatefulWidget {
 
 class _ScanPageState extends State<ScanPage> {
   String _extractedInformation = "No QR code scanned yet.";
-
   Future<void> _scanQRCode() async {
     try {
       String barcodeScanResult = await FlutterBarcodeScanner.scanBarcode(
@@ -22,16 +21,27 @@ class _ScanPageState extends State<ScanPage> {
         true,
         ScanMode.QR,
       );
-        String token = widget.token;
-      
+      Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${widget.token}',
+        'x-auth': widget.token // Specify content type as JSON
+      };
 
       if (barcodeScanResult != '-1') {
         // Construct a Uri object with the API endpoint and query parameter.
         Uri apiUrl = Uri.parse(
             'https://djc-africa-api.vercel.app/get-ticket-details/$barcodeScanResult');
 
-        // Make an API call using the Uri object.
-        http.Response response = await http.get(apiUrl);
+        // Make an API call using the Uri object and include the token in the headers.
+        http.Response response = await http.get(
+          apiUrl,
+          headers: headers,
+        );
+
+        print("API URL: $apiUrl");
+        print("Token: ${widget.token}");
+        print("Response Status Code: ${response.statusCode}");
+        print("Response Body: ${response.body}");
 
         // Check if the API call was successful.
         if (response.statusCode == 200) {
@@ -96,10 +106,12 @@ class _ScanPageState extends State<ScanPage> {
         ),
         SizedBox(height: 20),
         Text(
-          _extractedInformation,
+          // _extractedInformation,
+          "No QR code scanned yet.",
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
+        // Text("Token: ${widget.token}"),
       ]),
     );
   }
