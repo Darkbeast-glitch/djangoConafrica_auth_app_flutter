@@ -29,31 +29,41 @@ class _UserDetailPageState extends State<UserDetailPage> {
     tickets = userData['data']['tickets'];
   }
 
-  void _toggleEnrollment(bool value, int index) async {
-    // Perform API request to toggle attendee enrollment state
+  Future<void> _toggleEnrollment(bool value, int index) async {
     final ticketUuid = tickets[index]['uuid'];
 
     try {
       final response = await http.patch(
         Uri.parse(
-            'https://djc-africa-api.vercel.app/enroll-attendee/$ticketUuid'), // Include ticket UUID in the URL
+            'https://djc-africa-api.vercel.app/enroll-attendee/$ticketUuid'),
         body: jsonEncode({'enrolled': value}),
-        headers: {'Content-Type': 'application/json', 'x-auth': widget.token},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
       );
 
-      print("uuid:$ticketUuid");
+      print('UUID: $ticketUuid');
+      print('API Response Status Code: ${response.statusCode}');
+      print('API Response Body: ${response.body}');
+
       if (response.statusCode == 200) {
         setState(() {
-          // Update the status in the local data
           tickets[index]['status'] = value;
         });
       } else {
-        // Handle the error, e.g., show an error message to the user
         print('Failed to update enrollment status');
+        // Handle the error, e.g., show a snackbar or an alert dialog to the user
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(content: Text('Failed to update enrollment status')),
+        // );
       }
     } catch (e) {
-      // Handle network or other errors
       print('Error: $e');
+      // Handle network or other errors
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(content: Text('Error occurred while updating enrollment status')),
+      // );
     }
   }
 
@@ -61,6 +71,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
   Widget build(BuildContext context) {
     final String fullName = userData['data']['profile']['fullname'].toString();
     final String country = userData['data']['profile']['country'].toString();
+    final String email = userData['data']['profile']['email'].toString();
 
     return Scaffold(
       appBar: AppBar(
@@ -87,21 +98,57 @@ class _UserDetailPageState extends State<UserDetailPage> {
         ),
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 25, vertical: 25),
-            width: MediaQuery.of(context).size.width,
-            height: 98,
+            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 25),
+            width: 332,
+            height: 131,
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: primaryColor,
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: Text(
-              widget.barcodeResult,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text(
+                      fullName,
+                      style: TextStyle(
+                        fontSize: 23,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 5),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text(
+                      email,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 5),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text(
+                      country,
+                      style: TextStyle(fontSize: 18, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
           SizedBox(height: 10),
@@ -110,43 +157,6 @@ class _UserDetailPageState extends State<UserDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Full Name:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                    Text(
-                      fullName,
-                      style: TextStyle(
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Country:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                    Text(
-                      country,
-                      style: TextStyle(
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
                 SizedBox(height: 20),
                 Text(
                   'Tickets:',
@@ -165,18 +175,14 @@ class _UserDetailPageState extends State<UserDetailPage> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                entry.value['ticket_name'],
+                                entry.value['ticket_name'] != null
+                                    ? entry.value['ticket_name']
+                                    : 'Ticket Name Unavailable',
                                 style: TextStyle(
                                   fontSize: 16,
                                 ),
                               ),
-                              // If it's the "Donation" ticket, disable the switch
-                              if (entry.value['ticket_name'] == 'Donation')
-                                Switch(
-                                  value: entry.value['status'],
-                                  onChanged: null,
-                                )
-                              else
+                              if (entry.value['ticket_name'] != 'Donation')
                                 Row(
                                   children: [
                                     Text(
@@ -191,12 +197,9 @@ class _UserDetailPageState extends State<UserDetailPage> {
                                     ),
                                     Switch(
                                       value: entry.value['status'],
-                                      onChanged: entry.value['status']
-                                          ? null // If already enrolled, disable the switch
-                                          : (value) {
-                                              _toggleEnrollment(
-                                                  value, entry.key);
-                                            },
+                                      onChanged: (value) {
+                                        _toggleEnrollment(value, entry.key);
+                                      },
                                     ),
                                   ],
                                 ),

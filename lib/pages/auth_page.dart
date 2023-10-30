@@ -17,64 +17,39 @@ class _AuthPageState extends State<AuthPage> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
-  Future<void> _authenticateUser(
-    String enteredCode,
-  ) async {
+  Future<void> _authenticateUser(String enteredCode) async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      Map<String, String> headers = {
-        'Content-Type': 'application/json', // Specify content type as JSON
-      };
-
       Map<String, String> body = {
         'vendor_id': enteredCode,
       };
 
       http.Response response = await http.post(
         Uri.parse('https://djc-africa-api.vercel.app/authorize'),
-        headers: headers,
-        body: jsonEncode(body), // Encode the request body as JSON
+        body: jsonEncode(body),
+        headers: {'Content-Type': 'application/json'},
       );
 
       print('Response Status Code: ${response.statusCode}');
       print('Response Body: ${response.body}');
 
-      if (response.statusCode == 200) {
-        // Parse the JSON response
+      if (response.statusCode == 201) {
         Map<String, dynamic> responseData = json.decode(response.body);
 
-        // Check if the entered code matches the hardcoded value or the vendor_id in the response
-        if (enteredCode == "ab1232" ||
-            enteredCode == responseData['vendor_id']) {
-          // Authentication successful, navigate to ScanPage
-          String token =
-              responseData['token']; // Assuming the token is in the response
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => ScanPage(token: token)),
-          );
+        // Assuming the API response includes a 'token' field
+        String token =
+            responseData['token']; // Extract token from response data
 
-          // Show Snackbar with success message after navigating to ScanPage
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Authentication Successful'),
-              backgroundColor: Colors.green, // Change color if needed
-            ),
-          );
-        } else {
-          // Invalid code entered, show message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Invalid code. Please try again.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        // Redirect to ScanPage and pass the token as a parameter
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => ScanPage(token: token)),
+        );
       } else {
-        // Authentication failed, show message
+        // Show error message for any response other than a successful one
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Authentication Failed. Please try again.'),
@@ -83,7 +58,6 @@ class _AuthPageState extends State<AuthPage> {
         );
       }
     } catch (e) {
-      // Handle network or other errors, show error message
       print('Error occurred: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

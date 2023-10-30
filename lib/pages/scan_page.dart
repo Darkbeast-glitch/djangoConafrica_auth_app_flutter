@@ -40,12 +40,11 @@ class _ScanPageState extends State<ScanPage> {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ${widget.token}',
-            'x-auth': widget.token
           },
         );
 
         // Check if the API call was successful.
-        if (response.statusCode == 200) {
+        if (response.statusCode == 200 || response.statusCode == 201) {
           // Parse the response from the API call.
           _extractedInformation = response.body;
 
