@@ -6,10 +6,10 @@ import 'package:http/http.dart' as http;
 class UserDetailPage extends StatefulWidget {
   final String data;
   final String barcodeResult;
-  final String token; //
+  final String token;
 
   const UserDetailPage(
-      {super.key,
+      {Key? key,
       required this.data,
       required this.barcodeResult,
       required this.token});
@@ -55,28 +55,13 @@ class _UserDetailPageState extends State<UserDetailPage> {
       // Handle network or other errors
       print('Error: $e');
     }
-
-    // You can use the 'tickets[index]['uuid']' to identify the ticket
-    // and 'value' to determine if the attendee is being enrolled or unenrolled
   }
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, dynamic> userData = jsonDecode(widget.data);
-
-    final List<String> ticketNames = (userData['data']['tickets'] as List)
-        .map((ticket) => ticket['ticket_name'].toString())
-        .toList();
-
     final String fullName = userData['data']['profile']['fullname'].toString();
     final String country = userData['data']['profile']['country'].toString();
 
-    // List<String> formattedData = [
-    //   'Barcode Result: $barcodeResult',
-    //   'Full Name: $fullName',
-    //   'Country: $country',
-    //   'Tickets: ${ticketNames.join(', ')}'
-    // ];
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -125,32 +110,42 @@ class _UserDetailPageState extends State<UserDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Full Name:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                Text(
-                  fullName,
-                  style: TextStyle(
-                    fontSize: 16,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Full Name:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    Text(
+                      fullName,
+                      style: TextStyle(
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
                 ),
                 SizedBox(height: 20),
-                Text(
-                  'Country:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                Text(
-                  country,
-                  style: TextStyle(
-                    fontSize: 16,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Country:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    Text(
+                      country,
+                      style: TextStyle(
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
                 ),
                 SizedBox(height: 20),
                 Text(
@@ -167,7 +162,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                       .map(
                         (entry) => ListTile(
                           title: Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
                                 entry.value['ticket_name'],
@@ -175,23 +170,36 @@ class _UserDetailPageState extends State<UserDetailPage> {
                                   fontSize: 16,
                                 ),
                               ),
-                              Spacer(),
-                              Text(
-                                entry.value['status'] ? 'Enrolled' : 'Enroll',
-                                style: TextStyle(
-                                    color: entry.value['status']
-                                        ? Colors.green
-                                        : Colors.red,
-                                    fontWeight: FontWeight.bold),
-                              ), // Add spacer to separate ticket name from switches
-                              Switch(
-                                value: entry.value['status'],
-                                onChanged: entry.value['status']
-                                    ? null // If already enrolled, disable the switch
-                                    : (value) {
-                                        _toggleEnrollment(value, entry.key);
-                                      },
-                              ),
+                              // If it's the "Donation" ticket, disable the switch
+                              if (entry.value['ticket_name'] == 'Donation')
+                                Switch(
+                                  value: entry.value['status'],
+                                  onChanged: null,
+                                )
+                              else
+                                Row(
+                                  children: [
+                                    Text(
+                                      entry.value['status']
+                                          ? 'Enrolled'
+                                          : 'Enroll',
+                                      style: TextStyle(
+                                          color: entry.value['status']
+                                              ? Colors.green
+                                              : Colors.red,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    Switch(
+                                      value: entry.value['status'],
+                                      onChanged: entry.value['status']
+                                          ? null // If already enrolled, disable the switch
+                                          : (value) {
+                                              _toggleEnrollment(
+                                                  value, entry.key);
+                                            },
+                                    ),
+                                  ],
+                                ),
                             ],
                           ),
                         ),
@@ -199,6 +207,15 @@ class _UserDetailPageState extends State<UserDetailPage> {
                       .toList(),
                 ),
                 SizedBox(height: 60),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      "images/djangocon.png",
+                      height: 75,
+                    ),
+                  ],
+                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -213,102 +230,3 @@ class _UserDetailPageState extends State<UserDetailPage> {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import 'package:djangoconafrica/components/colors.dart';
-// import 'package:flutter/material.dart';
-// import 'dart:convert';
-
-// class UserDetailPage extends StatelessWidget {
-//   final String data;
-//   final String barcodeResult;
-
-//   const UserDetailPage(
-//       {Key? key, required this.data, required this.barcodeResult})
-//       : super(key: key);
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final Map<String, dynamic> userData = jsonDecode(data);
-
-//     final List<String> ticketNames = (userData['data']['tickets'] as List)
-//         .map((ticket) => ticket['ticket_name'].toString())
-//         .toList();
-
-//     final String fullName = userData['data']['profile']['fullname'].toString();
-//     final String country = userData['data']['profile']['country'].toString();
-
-//     List<String> formattedData = [
-//       'Barcode Result: $barcodeResult',
-//       'Full Name: $fullName',
-//       'Country: $country',
-//       'Tickets: ${ticketNames.join(', ')}'
-//     ];
-
-//     return Scaffold(
-//       appBar: AppBar(
-//         leading: IconButton(
-//           onPressed: () {
-//             Navigator.pop(context);
-//           },
-//           icon: Icon(
-//             Icons.arrow_back_ios,
-//             color: primaryColor,
-//             size: 20,
-//           ),
-//         ),
-//         centerTitle: true,
-//         backgroundColor: transparentColor,
-//         elevation: 0,
-//         title: Text(
-//           "DjangoCon Africa",
-//           style: TextStyle(
-//             color: secondaryColor,
-//             fontWeight: FontWeight.bold,
-//             fontSize: 23,
-//           ),
-//         ),
-//       ),
-//       body: ListView.builder(
-//         itemCount: formattedData.length,
-//         itemBuilder: (context, index) {
-//           return ListTile(
-//             title: Text(formattedData[index]),
-//           );
-//         },
-//       ),
-//     );
-//   }
-// }
