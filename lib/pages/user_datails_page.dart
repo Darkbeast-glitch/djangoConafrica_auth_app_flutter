@@ -197,9 +197,13 @@ class _UserDetailPageState extends State<UserDetailPage> {
                                     ),
                                     Switch(
                                       value: entry.value['status'],
-                                      onChanged: (value) {
-                                        _toggleEnrollment(value, entry.key);
-                                      },
+                                      onChanged: entry.value['status']
+                                          ? null // Disable the switch if already enrolled
+                                          : (value) {
+                                              _toggleEnrollment(
+                                                  value, entry.key);
+                                            },
+                                      activeColor: primaryColor,
                                     ),
                                   ],
                                 ),
