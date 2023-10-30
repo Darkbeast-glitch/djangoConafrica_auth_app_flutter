@@ -1,5 +1,6 @@
 import 'package:djangoconafrica/components/colors.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -21,6 +22,8 @@ class UserDetailPage extends StatefulWidget {
 class _UserDetailPageState extends State<UserDetailPage> {
   late Map<String, dynamic> userData;
   late List<dynamic> tickets;
+  bool _isLoading = false;
+  String _extractedInformation = "No QR code scanned yet.";
 
   @override
   void initState() {
@@ -64,6 +67,64 @@ class _UserDetailPageState extends State<UserDetailPage> {
       // ScaffoldMessenger.of(context).showSnackBar(
       //   SnackBar(content: Text('Error occurred while updating enrollment status')),
       // );
+    }
+  }
+
+  Future<void> _scanQRCode() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      String barcodeScanResult = await FlutterBarcodeScanner.scanBarcode(
+        '#ff6666',
+        'Cancel',
+        true,
+        ScanMode.QR,
+      );
+
+      if (barcodeScanResult != '-1') {
+        // Construct a Uri object with the API endpoint and query parameter.
+        Uri apiUrl = Uri.parse(
+            'https://djc-africa-api.vercel.app/get-ticket-details/$barcodeScanResult');
+
+        // Make an API call using the Uri object and include the token in the headers.
+        http.Response response = await http.get(
+          apiUrl,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ${widget.token}',
+          },
+        );
+
+        // Check if the API call was successful.
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          // Parse the response from the API call.
+          _extractedInformation = response.body;
+
+          // Navigate to another page with the extracted data.
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => UserDetailPage(
+                data: _extractedInformation,
+                barcodeResult: barcodeScanResult,
+                token: widget.token,
+              ),
+            ),
+          );
+        } else {
+          _extractedInformation = "Failed to fetch data from API.";
+        }
+      } else {
+        _extractedInformation = "QR code scan was canceled.";
+      }
+    } catch (e) {
+      _extractedInformation = "Error occurred: $e";
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -214,6 +275,23 @@ class _UserDetailPageState extends State<UserDetailPage> {
                       .toList(),
                 ),
                 SizedBox(height: 60),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: _scanQRCode,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize:
+                            Size(MediaQuery.of(context).size.width / 1.8, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(44),
+                        ),
+                        backgroundColor: secondaryColor,
+                      ),
+                      child: Text("Scan New Ticket 🎫"),
+                    ),
+                  ],
+                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
