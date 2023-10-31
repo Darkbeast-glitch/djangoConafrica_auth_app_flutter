@@ -31,11 +31,9 @@ class _ScanPageState extends State<ScanPage> {
       );
 
       if (barcodeScanResult != '-1') {
-        // Construct a Uri object with the API endpoint and query parameter.
         Uri apiUrl = Uri.parse(
             'https://djc-africa-api.vercel.app/get-ticket-details/$barcodeScanResult');
 
-        // Make an API call using the Uri object and include the token in the headers.
         http.Response response = await http.get(
           apiUrl,
           headers: {
@@ -44,12 +42,8 @@ class _ScanPageState extends State<ScanPage> {
           },
         );
 
-        // Check if the API call was successful.
         if (response.statusCode == 200) {
-          // Parse the response from the API call.
           String extractedInformation = response.body;
-
-          // Navigate to the UserDetailPage with the extracted data.
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -62,26 +56,29 @@ class _ScanPageState extends State<ScanPage> {
           );
         } else {
           // Show error message for invalid QR code.
-          setState(() {
-            _extractedInformation = "Invalid QR code. Please try again.";
-          });
+          _showErrorMessage("Invalid QR code. Please try again.");
         }
       } else {
         // Show message for canceled scan.
-        setState(() {
-          _extractedInformation = "QR code scan was canceled.";
-        });
+        _showErrorMessage("QR code scan was canceled.");
       }
     } catch (e) {
       // Handle other errors that might occur during scanning.
-      setState(() {
-        _extractedInformation = "Error occurred: $e";
-      });
+      _showErrorMessage("Error occurred: $e");
     } finally {
       setState(() {
         _isLoading = false;
       });
     }
+  }
+
+  void _showErrorMessage(String message) {
+    setState(() {
+      _extractedInformation = message;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override

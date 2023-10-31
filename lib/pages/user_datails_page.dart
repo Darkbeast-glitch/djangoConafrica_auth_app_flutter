@@ -205,7 +205,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                       Text(
                         fullName,
                         style: TextStyle(
-                          fontSize: 23,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
