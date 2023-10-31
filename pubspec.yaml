@@ -32,13 +32,25 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_barcode_scanner: ^2.0.0
+ 
+
+
   flutter_riverpod: ^2.4.5
   google_fonts: ^6.1.0
   http: ^1.1.0
 
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  flutter_launcher_icons: "^0.13.1"
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "images/maindjango.png"
+  min_sdk_android: 21 # android min sdk min:16, default 21
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 # The following section is specific to Flutter packages.

@@ -1,4 +1,5 @@
 import 'package:djangoconafrica/components/colors.dart';
+import 'package:djangoconafrica/pages/scan_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'dart:convert';
@@ -97,13 +98,13 @@ class _UserDetailPageState extends State<UserDetailPage> {
           },
         );
 
-        // Check if the API call was successful.
+        // Check if the API call was successful and the data is valid.
         if (response.statusCode == 200 || response.statusCode == 201) {
           // Parse the response from the API call.
           _extractedInformation = response.body;
 
           // Navigate to another page with the extracted data.
-          Navigator.push(
+          Navigator.pushReplacement(
             context,
             MaterialPageRoute(
               builder: (context) => UserDetailPage(
@@ -114,13 +115,23 @@ class _UserDetailPageState extends State<UserDetailPage> {
             ),
           );
         } else {
-          _extractedInformation = "Failed to fetch data from API.";
+          // Show error message for invalid QR code.
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Invalid QR code. Please try again.')),
+          );
         }
       } else {
-        _extractedInformation = "QR code scan was canceled.";
+        // Show message for canceled scan.
+        setState(() {
+          _extractedInformation = "QR code scan was canceled.";
+          _isLoading = false;
+        });
       }
     } catch (e) {
-      _extractedInformation = "Error occurred: $e";
+      // Handle other errors that might occur during scanning.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error occurred: $e')),
+      );
     } finally {
       setState(() {
         _isLoading = false;
@@ -134,183 +145,200 @@ class _UserDetailPageState extends State<UserDetailPage> {
     final String country = userData['data']['profile']['country'].toString();
     final String email = userData['data']['profile']['email'].toString();
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          icon: Icon(
-            Icons.arrow_back_ios,
-            color: primaryColor,
-            size: 20,
+    return WillPopScope(
+      onWillPop: () async {
+        // Navigate back to ScanPage when back button is pressed
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => ScanPage(token: widget.token),
           ),
-        ),
-        centerTitle: true,
-        backgroundColor: transparentColor,
-        elevation: 0,
-        title: Text(
-          "DjangoCon Africa",
-          style: TextStyle(
-            color: secondaryColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 23,
-          ),
-        ),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 25),
-            width: 332,
-            height: 131,
-            decoration: BoxDecoration(
+        );
+        // Prevent default back navigation
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            onPressed: () {
+              // Navigate back to ScanPage when back arrow icon is pressed
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => ScanPage(token: widget.token),
+                ),
+              );
+            },
+            icon: Icon(
+              Icons.arrow_back_ios,
               color: primaryColor,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Text(
-                      fullName,
-                      style: TextStyle(
-                        fontSize: 23,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 5),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Text(
-                      email,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 5),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Text(
-                      country,
-                      style: TextStyle(fontSize: 18, color: Colors.white),
-                    ),
-                  ],
-                ),
-              ],
+              size: 20,
             ),
           ),
-          SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(height: 20),
-                Text(
-                  'Tickets:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+          centerTitle: true,
+          backgroundColor: transparentColor,
+          elevation: 0,
+          title: Text(
+            "DjangoCon Africa",
+            style: TextStyle(
+              color: secondaryColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 23,
+            ),
+          ),
+        ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 30, vertical: 25),
+              width: 332,
+              height: 131,
+              decoration: BoxDecoration(
+                color: primaryColor,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Text(
+                        fullName,
+                        style: TextStyle(
+                          fontSize: 23,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                Column(
-                  children: tickets
-                      .asMap()
-                      .entries
-                      .map(
-                        (entry) => ListTile(
-                          title: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                entry.value['ticket_name'] != null
-                                    ? entry.value['ticket_name']
-                                    : 'Ticket Name Unavailable',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                ),
-                              ),
-                              if (entry.value['ticket_name'] != 'Donation')
-                                Row(
-                                  children: [
-                                    Text(
-                                      entry.value['status']
-                                          ? 'Enrolled'
-                                          : 'Enroll',
-                                      style: TextStyle(
-                                          color: entry.value['status']
-                                              ? Colors.green
-                                              : Colors.red,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                    Switch(
-                                      value: entry.value['status'],
-                                      onChanged: entry.value['status']
-                                          ? null // Disable the switch if already enrolled
-                                          : (value) {
-                                              _toggleEnrollment(
-                                                  value, entry.key);
-                                            },
-                                      activeColor: primaryColor,
-                                    ),
-                                  ],
-                                ),
-                            ],
-                          ),
+                  SizedBox(height: 5),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Text(
+                        email,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white,
                         ),
-                      )
-                      .toList(),
-                ),
-                SizedBox(height: 60),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedButton(
-                      onPressed: _scanQRCode,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize:
-                            Size(MediaQuery.of(context).size.width / 1.8, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(44),
-                        ),
-                        backgroundColor: secondaryColor,
                       ),
-                      child: Text("Scan New Ticket 🎫"),
-                    ),
-                  ],
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset(
-                      "images/djangocon.png",
-                      height: 75,
-                    ),
-                  ],
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text("DjangoCon Africa © 2023"),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                  SizedBox(height: 5),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Text(
+                        country,
+                        style: TextStyle(fontSize: 18, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: 20),
+                  Text(
+                    'Tickets:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  Column(
+                    children: tickets
+                        .asMap()
+                        .entries
+                        .map(
+                          (entry) => ListTile(
+                            title: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  entry.value['ticket_name'] != null
+                                      ? entry.value['ticket_name']
+                                      : 'Ticket Name Unavailable',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                if (entry.value['ticket_name'] != 'Donation')
+                                  Row(
+                                    children: [
+                                      Text(
+                                        entry.value['status']
+                                            ? 'Enrolled'
+                                            : 'Enroll',
+                                        style: TextStyle(
+                                            color: entry.value['status']
+                                                ? Colors.green
+                                                : Colors.red,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      Switch(
+                                        value: entry.value['status'],
+                                        onChanged: entry.value['status']
+                                            ? null // Disable the switch if already enrolled
+                                            : (value) {
+                                                _toggleEnrollment(
+                                                    value, entry.key);
+                                              },
+                                        activeColor: primaryColor,
+                                      ),
+                                    ],
+                                  ),
+                              ],
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  SizedBox(height: 60),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: _scanQRCode,
+                        style: ElevatedButton.styleFrom(
+                          minimumSize:
+                              Size(MediaQuery.of(context).size.width / 1.8, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(44),
+                          ),
+                          backgroundColor: secondaryColor,
+                        ),
+                        child: Text("Scan New Ticket 🎫"),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        "images/djangocon.png",
+                        height: 75,
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text("DjangoCon Africa © 2023"),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

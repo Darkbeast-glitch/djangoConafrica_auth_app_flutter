@@ -19,6 +19,7 @@ class _ScanPageState extends State<ScanPage> {
   Future<void> _scanQRCode() async {
     setState(() {
       _isLoading = true;
+      _extractedInformation = "Scanning QR code...";
     });
 
     try {
@@ -44,29 +45,38 @@ class _ScanPageState extends State<ScanPage> {
         );
 
         // Check if the API call was successful.
-        if (response.statusCode == 200 || response.statusCode == 201) {
+        if (response.statusCode == 200) {
           // Parse the response from the API call.
-          _extractedInformation = response.body;
+          String extractedInformation = response.body;
 
-          // Navigate to another page with the extracted data.
+          // Navigate to the UserDetailPage with the extracted data.
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => UserDetailPage(
-                data: _extractedInformation,
+                data: extractedInformation,
                 barcodeResult: barcodeScanResult,
                 token: widget.token,
               ),
             ),
           );
         } else {
-          _extractedInformation = "Failed to fetch data from API.";
+          // Show error message for invalid QR code.
+          setState(() {
+            _extractedInformation = "Invalid QR code. Please try again.";
+          });
         }
       } else {
-        _extractedInformation = "QR code scan was canceled.";
+        // Show message for canceled scan.
+        setState(() {
+          _extractedInformation = "QR code scan was canceled.";
+        });
       }
     } catch (e) {
-      _extractedInformation = "Error occurred: $e";
+      // Handle other errors that might occur during scanning.
+      setState(() {
+        _extractedInformation = "Error occurred: $e";
+      });
     } finally {
       setState(() {
         _isLoading = false;
