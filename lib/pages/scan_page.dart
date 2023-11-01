@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:djangoconafrica/components/colors.dart';
 import 'package:djangoconafrica/pages/user_datails_page.dart';
 import 'package:flutter/material.dart';
@@ -15,7 +17,6 @@ class ScanPage extends StatefulWidget {
 class _ScanPageState extends State<ScanPage> {
   bool _isLoading = false;
   String _extractedInformation = "No QR code scanned yet.";
-
   Future<void> _scanQRCode() async {
     setState(() {
       _isLoading = true;
@@ -43,24 +44,33 @@ class _ScanPageState extends State<ScanPage> {
         );
 
         if (response.statusCode == 200) {
-          String extractedInformation = response.body;
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => UserDetailPage(
-                data: extractedInformation,
-                barcodeResult: barcodeScanResult,
-                token: widget.token,
+          Map<String, dynamic> responseData = json.decode(response.body);
+
+          if (responseData.containsKey('data') &&
+              responseData['data'] != null) {
+            // Valid data found, navigate to UserDetailPage.
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => UserDetailPage(
+                  data: response.body,
+                  barcodeResult: barcodeScanResult,
+                  token: widget.token,
+                ),
               ),
-            ),
-          );
+            );
+          } else {
+            // No valid data found, show an error message.
+            _showErrorMessage("User has no ticket details.");
+          }
         } else {
-          // Show error message for invalid QR code.
+          // Invalid response status code, show an error message.
           _showErrorMessage("Invalid QR code. Please try again.");
         }
       } else {
-        // Show message for canceled scan.
-        _showErrorMessage("QR code scan was canceled.");
+        setState(() {
+          _extractedInformation = "QR code scan was canceled.";
+        });
       }
     } catch (e) {
       // Handle other errors that might occur during scanning.
@@ -103,7 +113,7 @@ class _ScanPageState extends State<ScanPage> {
           style: TextStyle(
             color: secondaryColor,
             fontWeight: FontWeight.bold,
-            fontSize: 23,
+            fontSize: 20,
           ),
         ),
       ),
@@ -138,7 +148,7 @@ class _ScanPageState extends State<ScanPage> {
           Text(
             _extractedInformation,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
         ],
       ),

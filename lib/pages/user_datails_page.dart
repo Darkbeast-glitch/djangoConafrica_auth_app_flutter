@@ -1,79 +1,83 @@
-import 'package:djangoconafrica/components/colors.dart';
-import 'package:djangoconafrica/pages/scan_page.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import 'package:djangoconafrica/pages/scan_page.dart';
+import 'package:djangoconafrica/components/colors.dart';
 
 class UserDetailPage extends StatefulWidget {
   final String data;
   final String barcodeResult;
   final String token;
 
-  const UserDetailPage(
-      {Key? key,
-      required this.data,
-      required this.barcodeResult,
-      required this.token});
+  const UserDetailPage({
+    Key? key,
+    required this.data,
+    required this.barcodeResult,
+    required this.token,
+  });
 
   @override
   State<UserDetailPage> createState() => _UserDetailPageState();
 }
 
 class _UserDetailPageState extends State<UserDetailPage> {
-  late Map<String, dynamic> userData;
-  late List<dynamic> tickets;
+  late Map<String, dynamic>? userData;
+  late List<dynamic>? tickets;
   bool _isLoading = false;
   String _extractedInformation = "No QR code scanned yet.";
 
   @override
   void initState() {
     super.initState();
-    userData = jsonDecode(widget.data);
-    tickets = userData['data']['tickets'];
+    Map<String, dynamic> decodedData = jsonDecode(widget.data);
+    userData = decodedData['data']['profile'];
+    tickets = decodedData['data']['tickets'];
   }
 
   Future<void> _toggleEnrollment(bool value, int index) async {
-    final ticketUuid = tickets[index]['uuid'];
+    if (tickets != null) {
+      final ticketUuid = tickets![index]['uuid'];
 
-    try {
-      final response = await http.patch(
-        Uri.parse(
-            'https://djc-africa-api.vercel.app/enroll-attendee/$ticketUuid'),
-        body: jsonEncode({'enrolled': value}),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${widget.token}',
-        },
-      );
+      try {
+        final response = await http.patch(
+          Uri.parse(
+              'https://djc-africa-api.vercel.app/enroll-attendee/$ticketUuid'),
+          body: jsonEncode({'enrolled': value}),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ${widget.token}',
+          },
+        );
 
-      print('UUID: $ticketUuid');
-      print('API Response Status Code: ${response.statusCode}');
-      print('API Response Body: ${response.body}');
+        print('UUID: $ticketUuid');
+        print('API Response Status Code: ${response.statusCode}');
+        print('API Response Body: ${response.body}');
 
-      if (response.statusCode == 200) {
-        setState(() {
-          tickets[index]['status'] = value;
-        });
-      } else {
-        print('Failed to update enrollment status');
-        // Handle the error, e.g., show a snackbar or an alert dialog to the user
-        // ScaffoldMessenger.of(context).showSnackBar(
-        //   SnackBar(content: Text('Failed to update enrollment status')),
-        // );
+        if (response.statusCode == 200) {
+          setState(() {
+            tickets![index]['status'] = value;
+          });
+        } else {
+          print('Failed to update enrollment status');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to update enrollment status')),
+          );
+        }
+      } catch (e) {
+        print('Error: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Error occurred while updating enrollment status')),
+        );
       }
-    } catch (e) {
-      print('Error: $e');
-      // Handle network or other errors
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   SnackBar(content: Text('Error occurred while updating enrollment status')),
-      // );
     }
   }
 
   Future<void> _scanQRCode() async {
     setState(() {
       _isLoading = true;
+      _extractedInformation = "Scanning QR code...";
     });
 
     try {
@@ -85,11 +89,9 @@ class _UserDetailPageState extends State<UserDetailPage> {
       );
 
       if (barcodeScanResult != '-1') {
-        // Construct a Uri object with the API endpoint and query parameter.
         Uri apiUrl = Uri.parse(
             'https://djc-africa-api.vercel.app/get-ticket-details/$barcodeScanResult');
 
-        // Make an API call using the Uri object and include the token in the headers.
         http.Response response = await http.get(
           apiUrl,
           headers: {
@@ -98,40 +100,40 @@ class _UserDetailPageState extends State<UserDetailPage> {
           },
         );
 
-        // Check if the API call was successful and the data is valid.
-        if (response.statusCode == 200 || response.statusCode == 201) {
-          // Parse the response from the API call.
-          _extractedInformation = response.body;
+        if (response.statusCode == 200) {
+          Map<String, dynamic> responseData = json.decode(response.body);
 
-          // Navigate to another page with the extracted data.
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => UserDetailPage(
-                data: _extractedInformation,
-                barcodeResult: barcodeScanResult,
-                token: widget.token,
+          if (responseData.containsKey('data') &&
+              responseData['data'] != null) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => UserDetailPage(
+                  data: response.body,
+                  barcodeResult: barcodeScanResult,
+                  token: widget.token,
+                ),
               ),
-            ),
-          );
+            );
+          } else {
+            setState(() {
+              _extractedInformation = "Invalid ticket data. Please try again.";
+            });
+          }
         } else {
-          // Show error message for invalid QR code.
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Invalid QR code. Please try again.')),
-          );
+          setState(() {
+            _extractedInformation = "Invalid QR code. Please try again.";
+          });
         }
       } else {
-        // Show message for canceled scan.
         setState(() {
           _extractedInformation = "QR code scan was canceled.";
-          _isLoading = false;
         });
       }
     } catch (e) {
-      // Handle other errors that might occur during scanning.
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error occurred: $e')),
-      );
+      setState(() {
+        _extractedInformation = "Error occurred: $e";
+      });
     } finally {
       setState(() {
         _isLoading = false;
@@ -141,26 +143,23 @@ class _UserDetailPageState extends State<UserDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final String fullName = userData['data']['profile']['fullname'].toString();
-    final String country = userData['data']['profile']['country'].toString();
-    final String email = userData['data']['profile']['email'].toString();
+    final String fullName = userData?['fullname']?.toString() ?? '';
+    final String country = userData?['country']?.toString() ?? '';
+    final String email = userData?['email']?.toString() ?? '';
 
     return WillPopScope(
       onWillPop: () async {
-        // Navigate back to ScanPage when back button is pressed
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => ScanPage(token: widget.token),
           ),
         );
-        // Prevent default back navigation
         return false;
       },
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(
             onPressed: () {
-              // Navigate back to ScanPage when back arrow icon is pressed
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(
                   builder: (context) => ScanPage(token: widget.token),
@@ -181,7 +180,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
             style: TextStyle(
               color: secondaryColor,
               fontWeight: FontWeight.bold,
-              fontSize: 23,
+              fontSize: 20,
             ),
           ),
         ),
@@ -189,9 +188,9 @@ class _UserDetailPageState extends State<UserDetailPage> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 30, vertical: 25),
-              width: 332,
-              height: 131,
+              padding: EdgeInsets.symmetric(horizontal: 30, vertical: 30),
+              width: 368,
+              height: MediaQuery.of(context).size.height / 5.5,
               decoration: BoxDecoration(
                 color: primaryColor,
                 borderRadius: BorderRadius.circular(16),
@@ -205,7 +204,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                       Text(
                         fullName,
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -219,7 +218,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                       Text(
                         email,
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 14,
                           fontWeight: FontWeight.w400,
                           color: Colors.white,
                         ),
@@ -232,7 +231,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                     children: [
                       Text(
                         country,
-                        style: TextStyle(fontSize: 18, color: Colors.white),
+                        style: TextStyle(fontSize: 14, color: Colors.white),
                       ),
                     ],
                   ),
@@ -243,63 +242,74 @@ class _UserDetailPageState extends State<UserDetailPage> {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: 20),
                   Text(
                     'Tickets:',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                      fontSize: 14,
                     ),
                   ),
+                  if (tickets?.isEmpty ??
+                      true) // Check if tickets is empty or null
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'No tickets found',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
                   Column(
                     children: tickets
-                        .asMap()
-                        .entries
-                        .map(
-                          (entry) => ListTile(
-                            title: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  entry.value['ticket_name'] != null
-                                      ? entry.value['ticket_name']
-                                      : 'Ticket Name Unavailable',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                  ),
+                            ?.asMap()
+                            .entries
+                            .map(
+                              (entry) => ListTile(
+                                title: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      entry.value['ticket_name'] != null
+                                          ? entry.value['ticket_name']
+                                          : 'Ticket Name Unavailable',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    if (entry.value['ticket_name'] !=
+                                        'Donation')
+                                      Row(
+                                        children: [
+                                          Text(
+                                            entry.value['status']
+                                                ? 'Enrolled'
+                                                : 'Enroll',
+                                            style: TextStyle(
+                                                color: entry.value['status']
+                                                    ? Colors.green
+                                                    : Colors.red,
+                                                fontWeight: FontWeight.bold),
+                                          ),
+                                          Switch(
+                                            value: entry.value['status'],
+                                            onChanged: entry.value['status']
+                                                ? null
+                                                : (value) {
+                                                    _toggleEnrollment(
+                                                        value, entry.key);
+                                                  },
+                                            activeColor: primaryColor,
+                                          ),
+                                        ],
+                                      ),
+                                  ],
                                 ),
-                                if (entry.value['ticket_name'] != 'Donation')
-                                  Row(
-                                    children: [
-                                      Text(
-                                        entry.value['status']
-                                            ? 'Enrolled'
-                                            : 'Enroll',
-                                        style: TextStyle(
-                                            color: entry.value['status']
-                                                ? Colors.green
-                                                : Colors.red,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                      Switch(
-                                        value: entry.value['status'],
-                                        onChanged: entry.value['status']
-                                            ? null // Disable the switch if already enrolled
-                                            : (value) {
-                                                _toggleEnrollment(
-                                                    value, entry.key);
-                                              },
-                                        activeColor: primaryColor,
-                                      ),
-                                    ],
-                                  ),
-                              ],
-                            ),
-                          ),
-                        )
-                        .toList(),
+                              ),
+                            )
+                            .toList() ??
+                        [], // Provide an empty list if tickets is null
                   ),
                   SizedBox(height: 60),
                   Row(

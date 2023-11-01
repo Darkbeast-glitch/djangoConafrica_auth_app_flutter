@@ -82,7 +82,7 @@ class _AuthPageState extends State<AuthPage> {
         title: Text(
           "DjangoCon Africa",
           style: TextStyle(
-              color: secondaryColor, fontWeight: FontWeight.bold, fontSize: 23),
+              color: secondaryColor, fontWeight: FontWeight.bold, fontSize: 20),
         ),
       ),
       body: Padding(
